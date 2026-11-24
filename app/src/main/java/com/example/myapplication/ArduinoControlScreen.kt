@@ -32,7 +32,7 @@ import java.util.Locale
 fun enviarComandoArduino(endpoint: String, coroutineScope: kotlinx.coroutines.CoroutineScope) {
     coroutineScope.launch(Dispatchers.IO) {
         try {
-            val url = URL("http://192.168.1.50/$endpoint")
+            val url = URL("http://10.138.6.1/$endpoint")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 3000
@@ -54,7 +54,7 @@ fun enviarComandoArduino(endpoint: String, coroutineScope: kotlinx.coroutines.Co
 suspend fun consultarContadorGatoArduino(): Int? {
     return withContext(Dispatchers.IO) {
         try {
-            val url = URL("http://192.168.1.50/estado_gato")
+            val url = URL("http://10.138.6.1/estado_gato")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 3000
