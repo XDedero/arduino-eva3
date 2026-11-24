@@ -79,10 +79,10 @@ fun ArduinoControlScreen(onLogout: () -> Unit = {}) {
     val coroutineScope = rememberCoroutineScope()
     
     // Estado del sistema: 0 = Reposo (Verde), 1 = Alerta Reciente (Amarillo), 2 = Alerta Detectada (Rojo)
-    var isSystemActive by remember { mutableStateOf(false) } // Falso = apagado, Verdadero = Escuchando arduino
+    var isSystemActive by remember { mutableStateOf(true) } // Inicia en True para sincronizar desde que abres la app
 
     // Contadores e historial
-    var catExitCount by remember { mutableStateOf(24) }
+    var catExitCount by remember { mutableStateOf(0) } // Inicia en 0, no en 24
     val historyLog = remember { mutableStateListOf<String>() }
     
     // UI State para saber qué pantalla se muestra dentro del drawer
@@ -97,6 +97,10 @@ fun ArduinoControlScreen(onLogout: () -> Unit = {}) {
             visualState = 1 // Verde - Reposo
             while (true) {
                 val arduinoCount = consultarContadorGatoArduino()
+                
+                // Print to console to debug the connection
+                println("POLING ARDUINO: count = $arduinoCount, current = $catExitCount")
+
                 if (arduinoCount != null && arduinoCount > catExitCount) {
                     catExitCount = arduinoCount
                     val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
@@ -104,12 +108,16 @@ fun ArduinoControlScreen(onLogout: () -> Unit = {}) {
 
                     // Cambiar a Rojo temporalmente
                     visualState = 3
+                } else if (arduinoCount != null && arduinoCount < catExitCount) {
+                    // Sincronizar hacia abajo (ej. si arduino se reinicia)
+                    catExitCount = arduinoCount
                 }
+                
                 delay(3000)
 
-                // Si estaba en rojo, tras un rato volver a Amarillo o Verde
+                // Si estaba en rojo, tras un rato volver a Amarillo
                 if (visualState == 3) {
-                    delay(5000) // Mostrar el rojo por 5 segundos
+                    delay(4000) // Mostrar el rojo por 4 segundos (como en el Arduino)
                     visualState = 2 // Pasar a amarillo (Actividad reciente)
                 }
             }
@@ -248,21 +256,7 @@ fun ArduinoControlScreen(onLogout: () -> Unit = {}) {
                                 .padding(16.dp)
                                 .background(Color.Black, CircleShape)
                                 .border(8.dp, circleColor, CircleShape)
-                                .clip(CircleShape)
-                                .clickable {
-                                    // Click para encender/apagar o forzar prueba
-                                    if (!isSystemActive) {
-                                        isSystemActive = true
-                                        enviarComandoArduino("activar", coroutineScope)
-                                    } else {
-                                        // Forzar registro para pruebas
-                                        catExitCount++
-                                        visualState = 3 // Rojo
-                                        enviarComandoArduino("registrar_gato", coroutineScope)
-                                        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-                                        historyLog.add(0, "[$currentTime] Prueba Manual (Total: $catExitCount)")
-                                    }
-                                },
+                                .clip(CircleShape), // <- Se elimina el ".clickable { ... }"
                             contentAlignment = Alignment.Center
                         ) {
                             // Círculo sólido interno
@@ -290,12 +284,16 @@ fun ArduinoControlScreen(onLogout: () -> Unit = {}) {
                         )
 
                         if (visualState == 0) {
-                            Text(
-                                text = "Presiona el círculo para activar",
-                                color = Color.Gray,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
+                            Button(
+                                onClick = { 
+                                    isSystemActive = true
+                                    enviarComandoArduino("activar", coroutineScope)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EA043)),
+                                modifier = Modifier.padding(top = 16.dp)
+                            ) {
+                                Text("Encender Sistema", color = Color.White)
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(48.dp))
